@@ -1,0 +1,292 @@
+{
+  "_说明": "处理套餐（2026-11-02）。每个套餐由若干组组成，每组有自己的变量、时间步长（分钟）和高度。网页“数据管理 → 处理套餐”选好试验和起止时间后，为“每个试验 × 每个勾选的组”各生成一个普通处理请求（预览、提交与单组处理完全相同）。heights 可写 null（只有标量/地面变量）、\"standard\"（project_config.HEIGHTS_M，100–10000 m 共 46 层）、\"warm_core\"（WARM_CORE_HEIGHTS_M，到 15000 m）或整数列表（米）。enabled=false 的组默认不勾选。dataset 是默认写入的数据集（post = 网页处理专用目录）。merge_groups=false 时各组不合并、各自一个任务（适合变量多、互不共用原始场的套餐，可以并行）；默认 true：时间步长和高度相同的组合成一个请求。改套餐只改本文件，改完刷新网页即可，不用重启。",
+  "basic_tc": {
+    "label": "台风基本量",
+    "description": "海平面中心与强度（5 min），各层中心与三维气压、涡旋倾斜、内核区风切变、雷达反射率、降水（1 h）。轴平均反射率在绘图时由 dbz1_polar / mdbz_polar 做线性 Z 平均。",
+    "dataset": "post",
+    "groups": [
+      {
+        "id": "center_intensity_5min",
+        "label": "海平面中心与强度",
+        "time_step_minutes": 5,
+        "heights": null,
+        "variables": [
+          "slp_center",
+          "center_geo",
+          "center_slp_5km",
+          "axis_mean_max_wind",
+          "rmw",
+          "local_max_wind",
+          "r_34",
+          "center_land_distance"
+        ]
+      },
+      {
+        "id": "layer_center_1h",
+        "label": "各层中心与气压",
+        "time_step_minutes": 60,
+        "heights": "standard",
+        "variables": [
+          "layer_center",
+          "pressure"
+        ]
+      },
+      {
+        "id": "tilt_1h",
+        "label": "涡旋倾斜",
+        "time_step_minutes": 60,
+        "heights": null,
+        "variables": [
+          "tilt_2_8",
+          "tilt_x_2_8",
+          "tilt_y_2_8",
+          "tilt_angle_2_8",
+          "tilt_1_6",
+          "tilt_x_1_6",
+          "tilt_y_1_6",
+          "tilt_angle_1_6"
+        ]
+      },
+      {
+        "id": "shear_1h",
+        "label": "内核区风切变（150–350 km，200–850 hPa）",
+        "time_step_minutes": 60,
+        "heights": null,
+        "variables": [
+          "shear_core_200_850_u",
+          "shear_core_200_850_v",
+          "shear_core_200_850_magnitude",
+          "shear_core_200_850_direction"
+        ]
+      },
+      {
+        "id": "reflectivity_1h",
+        "label": "雷达反射率（笛卡尔 + 极坐标）",
+        "time_step_minutes": 60,
+        "heights": "standard",
+        "variables": [
+          "dbz",
+          "mdbz",
+          "dbz1_polar",
+          "mdbz_polar"
+        ]
+      },
+      {
+        "id": "precipitation_1h",
+        "label": "降水（累计、逐时与极坐标）",
+        "time_step_minutes": 60,
+        "heights": null,
+        "variables": [
+          "RAINNC",
+          "RAINNCV",
+          "RAINNCV_polar"
+        ]
+      },
+      {
+        "id": "extra_structure_1h",
+        "label": "可选补充：轴对称结构",
+        "enabled": false,
+        "time_step_minutes": 60,
+        "heights": "standard",
+        "variables": [
+          "vt1_polar",
+          "vr1_polar",
+          "wa1_polar",
+          "rmw_by_layer_center"
+        ]
+      },
+      {
+        "id": "extra_environment_1h",
+        "label": "可选补充：环境切变（d02 150–350 km）与更多倾斜层",
+        "enabled": false,
+        "time_step_minutes": 60,
+        "heights": null,
+        "variables": [
+          "shear_200_850_u",
+          "shear_200_850_v",
+          "shear_200_850_magnitude",
+          "shear_200_850_direction",
+          "tilt_2_4",
+          "tilt_2_6",
+          "tilt_2_10"
+        ]
+      }
+    ]
+  },
+  "analysis_tc": {
+    "label": "台风分析量",
+    "description": "逐时：更多层次的涡旋倾斜；温度、湿度水汽、风暴相对径向水汽通量、风暴相对风 (ua_sr/va_sr)、风暴相对径向/切向风、垂直速度、位涡、微物理潜热的笛卡尔场 + 海平面中心极坐标 (X_polar) + 各层中心极坐标 (X1_polar)；风暴相对 RMW 随高度；边界层风暴相对入流角与地表通量；云分类（逐时二维类别图）。与风有关的量全部用风暴相对风（_sr，减去 t ± 3 h 中心差分的移速）。各组分别运行。需要先有 basic_tc 的海平面中心（每 5 min，用于风暴移速）与各层中心，已有则直接复用。",
+    "dataset": "post",
+    "merge_groups": false,
+    "groups": [
+      {
+        "id": "tilt_layers_1h",
+        "label": "涡旋倾斜 2–4 / 2–6 / 2–10 km",
+        "time_step_minutes": 60,
+        "heights": null,
+        "variables": [
+          "tilt_2_4",
+          "tilt_x_2_4",
+          "tilt_y_2_4",
+          "tilt_angle_2_4",
+          "tilt_2_6",
+          "tilt_x_2_6",
+          "tilt_y_2_6",
+          "tilt_angle_2_6",
+          "tilt_2_10",
+          "tilt_x_2_10",
+          "tilt_y_2_10",
+          "tilt_angle_2_10"
+        ]
+      },
+      {
+        "id": "moisture_1h",
+        "label": "温湿与水汽（温度、相对湿度、水汽、相当位温、风暴相对径向水汽通量）",
+        "time_step_minutes": 60,
+        "heights": "standard",
+        "variables": [
+          "rh",
+          "QVAPOR",
+          "theta_e",
+          "temp",
+          "qflux_r_sr",
+          "rh_polar",
+          "QVAPOR_polar",
+          "theta_e_polar",
+          "temp_polar",
+          "qflux_r_sr_polar",
+          "rh1_polar",
+          "QVAPOR1_polar",
+          "theta_e1_polar",
+          "temp1_polar",
+          "qflux_r_sr1_polar"
+        ]
+      },
+      {
+        "id": "wind_1h",
+        "label": "风场结构（全部用风暴相对风：ua_sr/va_sr、径向/切向风、RMW 随高度；另有垂直速度）",
+        "time_step_minutes": 60,
+        "heights": "standard",
+        "variables": [
+          "ua_sr",
+          "va_sr",
+          "wa",
+          "vr_sr",
+          "vt_sr",
+          "vr_sr1",
+          "vt_sr1",
+          "vr_sr_polar",
+          "vt_sr_polar",
+          "wa_polar",
+          "rmw_by_height_sr",
+          "vr_sr1_polar",
+          "vt_sr1_polar",
+          "wa1_polar",
+          "rmw_by_layer_center_sr"
+        ]
+      },
+      {
+        "id": "pv_heating_1h",
+        "label": "位涡与微物理潜热",
+        "time_step_minutes": 60,
+        "heights": "standard",
+        "variables": [
+          "pvo",
+          "diabatic_heating",
+          "pvo_polar",
+          "diabatic_heating_polar",
+          "pvo1_polar",
+          "diabatic_heating1_polar"
+        ]
+      },
+      {
+        "id": "cloud_classification_1h",
+        "label": "云分类（0 背景、1 其他回波、2 层状、3 浅对流、4 中对流、5 深对流）",
+        "time_step_minutes": 60,
+        "heights": null,
+        "variables": [
+          "classification"
+        ]
+      },
+      {
+        "id": "boundary_layer_1h",
+        "label": "边界层风暴相对入流角与地表通量（100–1000 m）",
+        "time_step_minutes": 60,
+        "heights": [
+          100,
+          200,
+          300,
+          400,
+          500,
+          600,
+          700,
+          800,
+          900,
+          1000
+        ],
+        "variables": [
+          "inflow_angle_sr",
+          "HFX",
+          "LH",
+          "PBLH",
+          "inflow_angle_sr_polar",
+          "HFX_polar",
+          "LH_polar",
+          "PBLH_polar",
+          "inflow_angle_sr1_polar"
+        ]
+      },
+      {
+        "id": "extra_dynamics_1h",
+        "label": "可选：辐合与相对涡度",
+        "enabled": false,
+        "time_step_minutes": 60,
+        "heights": "standard",
+        "variables": [
+          "convergence",
+          "vort_rel",
+          "convergence_polar",
+          "vort_rel_polar",
+          "convergence1_polar",
+          "vort_rel1_polar"
+        ]
+      },
+      {
+        "id": "extra_warm_core_1h",
+        "label": "可选：暖心（位温异常，到 15 km，需要 d02 环境场）",
+        "enabled": false,
+        "time_step_minutes": 60,
+        "heights": "warm_core",
+        "variables": [
+          "theta_anomaly",
+          "theta_anomaly_polar",
+          "theta_anomaly1_polar"
+        ]
+      },
+      {
+        "id": "extra_ventilation_1h",
+        "label": "可选：径向与下沉通风（径向风用风暴相对风）",
+        "enabled": false,
+        "time_step_minutes": 60,
+        "heights": "standard",
+        "variables": [
+          "vr_sr_ventilation_polar",
+          "w_ventilation_polar",
+          "vr_sr1_ventilation_polar",
+          "w1_ventilation_polar"
+        ]
+      },
+      {
+        "id": "extra_asymmetry_1h",
+        "label": "可选：回波与降水非对称（降水场在 basic_tc 里算）",
+        "enabled": false,
+        "time_step_minutes": 60,
+        "heights": null,
+        "variables": [
+          "mdbz_asymmetry",
+          "precipitation_asymmetry"
+        ]
+      }
+    ]
+  }
+}

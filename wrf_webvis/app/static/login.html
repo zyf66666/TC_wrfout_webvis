@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>登录 · WRF WebVis</title>
+    <link rel="stylesheet" href="/static/login.css?v=20261106" />
+  </head>
+  <body>
+    <main class="login-shell">
+      <form id="loginForm" class="login-card" autocomplete="on">
+        <h1>WRF WebVis</h1>
+        <p class="login-hint">请登录后查看看板</p>
+        <label>用户名
+          <input id="loginUsername" name="username" autocomplete="username" required maxlength="64" autofocus />
+        </label>
+        <label>密码
+          <input id="loginPassword" name="password" type="password" autocomplete="current-password" required maxlength="256" />
+        </label>
+        <button id="loginSubmit" type="submit">登录</button>
+        <p id="loginStatus" class="login-status" role="status"></p>
+      </form>
+    </main>
+    <script src="/static/login.js?v=20261106"></script>
+  </body>
+</html>

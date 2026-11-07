@@ -1,0 +1,7 @@
+numpy
+scipy
+matplotlib
+netCDF4
+wrf-python
+pydantic
+cmaps

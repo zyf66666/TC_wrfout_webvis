@@ -1,0 +1,41 @@
+{
+  "title": "DBZ horizontal 1000m",
+  "data_root": "/Volumes/WRF/processed",
+  "processed_root": "/Volumes/WRF/processed",
+  "wrfout_root": "/Volumes/land_1/WRF_225_land/run",
+  "member_name": "WRF_225_land",
+  "domain": 3,
+  "fig_type": 0,
+  "dpi": 200,
+  "variables": [
+    {
+      "name": "dbz",
+      "plot_type": "contourf",
+      "cmap": "turbo"
+    }
+  ],
+  "time": {
+    "values": [0]
+  },
+  "height": {
+    "values": [1000]
+  },
+  "angle": {
+    "values": [0, 360]
+  },
+  "radius": {
+    "values": [0, 200]
+  },
+  "format": {
+    "common": {
+      "title": "{member} {time} {height} {variables}"
+    },
+    "colorbar": {
+      "enabled": true
+    },
+    "quiver_key": {
+      "enabled": true
+    }
+  }
+}
+

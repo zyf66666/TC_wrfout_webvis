@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WRF WebVis</title>
+
+    <link rel="stylesheet" href="/static/styles.css?image-order=1&v=20261107-core&access=20261106&custom=20261014" />
+    <link rel="stylesheet" href="/static/workbench.css?v=20261107-core" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>WRF WebVis</h1>
+      <nav class="tabs">
+        <button class="tab active" data-view="dashboardView">&#30475;&#26495;</button>
+        <button class="tab" data-view="dataView" data-page="data">数据管理</button>
+
+
+
+
+      </nav>
+      <div id="status" class="status"></div>
+      <button id="openAccounts" class="topbar-log-button" type="button" data-write-only title="新建账号、设置每个账号能看哪些看板和页面">账号管理</button>
+
+      <button id="openProgress" type="button" data-plot-only>任务</button>
+      <button id="stopJob" disabled class="topbar-stop-button" type="button" data-plot-only>Stop</button>
+      <button id="openLogs" class="topbar-log-button" type="button" data-write-only>日志</button>
+    </header>
+
+    <section id="dashboardView" class="view active">
+      <div class="layout">
+        <aside class="sidebar">
+          <button id="newDashboard" class="primary" data-write-only>&#26032;&#24314;&#30475;&#26495;</button>
+          <div id="dashboards" class="dashboard-list"></div>
+        </aside>
+        <main class="main">
+          <div class="main-head">
+            <div class="dashboard-title-row">
+              <h2 id="dashboardTitle">&#26410;&#36873;&#25321;&#30475;&#26495;</h2>
+              <button id="renameDashboard" disabled data-write-only>Rename</button>
+              <button id="deleteDashboard" disabled data-write-only>Delete</button>
+              <button id="newChildDashboard" type="button" hidden data-write-only title="在当前看板下面新建一个子看板">新建子看板</button>
+              <select id="moveDashboard" hidden data-write-only aria-label="把当前看板移动到别的看板下面"></select>
+              <button id="toggleAnnotations" type="button" title="在图片上显示或隐藏批注">隐藏批注</button>
+              <button id="openTrash" type="button" data-write-only title="恢复最近删除的图片">最近删除</button>
+            </div>
+            <button id="openForm" class="primary" data-plot-settings-only>查看绘图界面</button>
+          </div>
+          <div id="dashboardFamily" class="dashboard-family" hidden></div>
+          <section id="imageGrid" class="image-grid"></section>
+        </main>
+      </div>
+    </section>
+
+    <section id="dataView" class="view data-view">
+      <div class="data-shell">
+        <div class="data-heading">
+          <div><h2>v3 数据管理</h2><p>查看 wrfout 与已完成切片，预览依赖后再提交处理。</p></div>
+        </div>
+        <form id="processingForm" class="data-card" onsubmit="return false">
+          <h3>选择处理参数</h3>
+          <div class="data-dataset-row">
+            <label>数据集（写到哪个根目录）<select name="dataset" id="dataDataset"><option value="post">post（网页处理）</option><option value="v3">processed_v3（旧数据）</option></select></label>
+            <p id="dataDatasetHint" class="hint">post：只放你在网页上亲自选择处理的数据，与 processed_v3 互不复用（中心等依赖在 post 里重新计算）。</p>
+          </div>
+          <section id="dataPresetPanel" class="data-subcard data-preset">
+            <h4>处理套餐</h4>
+            <p class="hint">选试验和套餐，按需勾选或修改每组的变量、时间步长和高度，然后预览、提交。每个试验 × 每个请求一个任务，同一个变量不拆开；不同试验、不同请求同时运行（服务器最多同时运行的个数见 <code>project_config.WEB_PROCESSING_WORKERS</code>）。basic_tc 把时间步长和高度相同的组合成一个请求（同一时次的 wrfout 只读一次）；analysis_tc 各组分别运行。套餐定义在 <code>处理数据_v3/processing_presets.json</code>，网页上的修改只对本次有效。这里选的试验、domain、参数配置和中心方案，下方“其他可处理变量”也会用。</p>
+            <div class="data-experiment-picker">
+              <div class="data-heading"><strong>试验（可多选）</strong><span id="dataExperimentCount" aria-live="polite">正在加载试验…</span></div>
+              <input type="hidden" name="experiments" id="dataExperiments" value="" />
+              <div class="data-experiment-tools">
+                <button type="button" data-experiment-select="all">全选</button>
+                <button type="button" data-experiment-select="_land">仅 land</button>
+                <button type="button" data-experiment-select="_sea">仅 sea</button>
+                <button type="button" data-experiment-select="none">清空</button>
+                <button type="button" id="dataExperimentAddToggle" aria-expanded="false" aria-controls="dataExperimentAdd" data-write-only>＋ 添加试验</button>
+              </div>
+              <div id="dataExperimentChoices" class="data-variable-choices data-experiment-choices" role="group" aria-label="试验"></div>
+              <div id="dataExperimentAdd" class="data-experiment-add" hidden data-write-only>
+                <p class="hint">登记一个新试验：名称只用英文字母、数字和下划线；路径填 wrfout 所在目录（如 <code>/Volumes/sea_2/WRF_315_new/run</code>）。登记保存在 <code>storage_data/custom_experiments.json</code>，不改 project_config.py。</p>
+                <div class="data-experiment-add-row">
+                  <label>试验名称<input id="dataExperimentNewName" placeholder="WRF_315_land_test" autocomplete="off" /></label>
+                  <label>wrfout 目录<input id="dataExperimentNewPath" placeholder="/Volumes/…/run" autocomplete="off" /></label>
+                  <button id="dataExperimentAddSubmit" type="button" class="primary">检查并添加</button>
+                </div>
+                <p id="dataExperimentAddStatus" class="data-status" aria-live="polite"></p>
+                <div id="dataExperimentCustomList" class="data-experiment-custom-list"></div>
+              </div>
+            </div>
+            <div class="data-form-grid">
+              <label>domain<input name="domain" type="number" min="1" max="99" value="3" /></label>
+              <label>参数配置<select name="profile_id" id="dataProfile"></select></label>
+              <label>中心方案<select name="center_scheme" id="dataCenterScheme"><option value="base">base</option></select></label>
+            </div>
+            <p id="dataCenterSchemeHint" class="hint"></p>
+            <div class="data-preset-head">
+              <label>套餐<select id="dataPreset"></select></label>
+              <label>起始时间 (h)<input id="dataPresetStart" type="number" min="0" step="any" value="0" /></label>
+              <label title="留空时每个试验算到 project_config 里的模拟时长（EXPERIMENT_END_HOURS）；填了数字则所有试验都算到这个时间。">结束时间 (h)<input id="dataPresetEnd" type="number" min="0" step="any" value="" placeholder="留空 = 各试验模拟时长" /></label>
+            </div>
+            <p id="dataPresetEndHint" class="hint"></p>
+            <p id="dataPresetDescription" class="hint"></p>
+            <div id="dataPresetGroups" class="data-preset-groups"></div>
+            <div class="data-actions">
+              <button id="previewPreset" type="button" data-write-only>预览依赖计划</button>
+              <button id="runPreset" class="primary" type="button" disabled data-write-only>提交处理</button>
+            </div>
+            <p id="presetStatus" class="data-status" aria-live="polite"></p>
+          </section>
+          <section id="dataSinglePanel" class="data-subcard">
+            <h4>其他可处理变量</h4>
+            <p class="hint">处理套餐以外的变量：自己填变量、时次和高度。试验、domain、参数配置、中心方案用上方“处理套餐”里的选择。</p>
+            <div class="data-form-grid">
+              <label>变量（多个用逗号分隔）<input name="variables" list="dataVariableList" value="U10" /><datalist id="dataVariableList"></datalist></label>
+              <label>时次（分钟）<input name="times_minutes" value="0" placeholder="0:120:60 或 0:103*60:60" /></label>
+              <label>高度（米；地面变量可留空）<input name="heights_m" value="1000" placeholder="100:1000:100" /></label>
+            </div>
+            <div class="data-variable-picker">
+              <div class="data-heading"><strong>可处理变量</strong><span id="dataVariableCount" aria-live="polite">正在加载变量…</span></div>
+              <p class="hint">点击变量加入或移除；鼠标停在变量上可查看单位、维度、含义和依赖。默认不列出内部辅助场（如 <code>_va_lower</code>）、别名和网格坐标，勾选“显示全部”可看到。</p>
+              <div class="data-variable-search-row">
+                <input id="dataVariableSearch" type="search" placeholder="搜索可处理变量" aria-label="搜索可处理变量" />
+                <label class="data-force"><input id="dataVariableShowAll" type="checkbox" />显示全部</label>
+              </div>
+              <div id="dataVariableChoices" class="data-variable-choices" role="group" aria-label="可处理变量"></div>
+            </div>
+            <p class="hint">范围采用“起点:终点:步长”，包含终点，每一项都可以写整数算式（如 0:103*60:60）；时次使用距 START_DATE 的整数分钟。多选试验时每个试验一个任务，同时运行。</p>
+            <div class="data-actions">
+              <button id="previewProcessing" type="button" data-write-only>预览依赖计划</button>
+              <button id="runProcessing" class="primary" type="button" disabled data-write-only>提交处理</button>
+              <button id="plotFromData" type="button" disabled data-write-only>用此配置绘图</button>
+            </div>
+            <p id="processingStatus" class="data-status" aria-live="polite"></p>
+          </section>
+          <details class="data-options"><summary>通用处理选项（两种方式共用）</summary>
+            <div class="data-form-grid">
+              <label>极坐标半径 (km)<input name="radius_km" type="number" step="any" /></label>
+              <label title="极坐标变量（*_polar）沿半径方向每隔多少 km 取一个点（每 1° 一条射线），不是 WRF 模式网格的格距；d03 网格仍是 1 km。">极坐标径向间隔 (km)<input name="radius_resolution_km" type="number" step="any" /></label>
+              <label>中心搜索半径 (km)<input name="center_search_radius_km" type="number" step="any" /></label>
+              <label>环境参考 domain<input name="theta_environment_domain" type="number" /></label>
+              <label>环境环内半径 (km)<input name="theta_ring_inner_km" type="number" step="any" /></label>
+              <label>环境环外半径 (km)<input name="theta_ring_outer_km" type="number" step="any" /></label>
+              <label>风切变来源 domain<input name="shear_source_domain" type="number" /></label>
+              <label>风切变内半径 (km)<input name="shear_radius_inner_km" type="number" step="any" /></label>
+              <label>风切变外半径 (km)<input name="shear_radius_outer_km" type="number" step="any" /></label>
+              <label title="四象限非对称度（mdbz_asymmetry、dbz_asymmetry、precipitation_asymmetry）在中心周围 0 到这个半径的圆盘内计算。X_asy_polar 等逐半径非对称场不受它影响，范围就是极坐标半径。">非对称度圆盘半径 (km)<input name="asymmetry_radius_km" type="number" step="any" min="1" /></label>
+              <label title="dbz_asymmetry 用哪一个高度（海拔，米）的雷达反射率极坐标场。">dbz 非对称度高度 (m)<input name="dbz_asymmetry_height_m" type="number" step="1" min="1" /></label>
+            </div>
+            <p class="hint">改变这些参数后，结果放在数据集里独立的参数配置目录（profiles/）。</p>
+          </details>
+          <label class="data-force" title="服务器同时运行几个处理任务，其余排队。改了立即生效：调大时排队中的任务马上开始；调小时正在运行的继续跑完。1 = 串行，硬盘最安静。">同时运行任务数
+            <select id="processingWorkers" data-write-only><option value="1">1（串行）</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+            <span id="processingWorkersStatus" class="hint"></span></label>
+          <label class="data-force"><input name="clip_to_source_end" type="checkbox" checked />时次超过试验 wrfout 最后时刻时自动截断（各试验模拟结束时间不同时使用）</label>
+          <label class="data-force"><input name="force" type="checkbox" />重新计算选中的目标切片</label>
+        </form>
+        <details id="processedInventory" class="data-card inventory-panel" open>
+          <summary>已处理数据</summary>
+          <div class="data-heading"><p id="inventorySummary" aria-live="polite">正在扫描已处理文件…</p><button id="refreshInventory" type="button">刷新清单</button></div>
+          <div class="inventory-filters">
+            <label>数据集<select id="inventoryDataset"><option value="">全部数据集</option></select></label>
+            <label>参数配置<select id="inventoryProfile"><option value="">全部配置</option></select></label>
+            <label>试验<select id="inventoryExperiment"><option value="">全部试验</option></select></label>
+            <label>domain<select id="inventoryDomain"><option value="">全部 domain</option></select></label>
+            <label>变量<input id="inventoryVariable" type="search" placeholder="输入变量名筛选" /></label>
+          </div>
+          <div id="inventoryList" class="inventory-scroll"></div>
+          <div class="inventory-pagination"><button id="inventoryPrevious" type="button">上一页</button><span id="inventoryPage"></span><button id="inventoryNext" type="button">下一页</button></div>
+          <div id="inventorySelected" class="inventory-selected" hidden></div>
+        </details>
+        <div class="data-card"><h3>处理计划</h3><div id="processingPlan">选择变量和时次后预览。</div></div>
+        <details id="processingHistoryPanel" class="data-card history-panel">
+          <summary><span>历史任务</span><span id="processingHistoryCount" class="history-count"></span></summary>
+          <div class="data-heading history-tools"><p class="hint">最近 100 个处理任务。“载入并重新预览”会把当时的参数填回上方表单。</p><button id="refreshProcessingHistory" type="button">刷新</button></div>
+          <div id="processingHistory"></div>
+        </details>
+      </div>
+    </section>
+
+
+
+
+
+    <dialog id="plotDialog">
+      <form id="plotForm" method="dialog" class="plot-form">
+        <div class="dialog-head">
+          <h3 id="plotDialogTitle">绘图参数（只读展示）</h3>
+          <button type="button" id="closeForm" class="icon-button">x</button>
+        </div>
+
+        <fieldset>
+          <legend>Basic</legend>
+          <div class="form-grid">
+            <label>title<input name="title" value="WRF plot" /></label>
+            <label>processed_root<input name="data_root" value="/Volumes/land_1/processed_v3" list="dataRootChoices" /><datalist id="dataRootChoices"><option value="/Volumes/land_1/post">post（网页处理）</option><option value="/Volumes/land_1/processed_v3">processed_v3（旧数据）</option></datalist></label>
+            <label>domain<input name="domain" type="number" value="3" /></label>
+            <label>fig_type
+              <select name="fig_type" id="figType">
+                <option value="0">horizontal</option>
+                <option value="1">radius-height</option>
+                <option value="2">time-radius</option>
+                <option value="3">time-azimuth</option>
+                <option value="4">height-azimuth</option>
+                <option value="5">time-series</option>
+                <option value="6">track</option>
+                <option value="7">3d</option>
+                <option value="8">time-height</option>
+                <option value="9">自定义代码</option>
+              </select>
+            </label>
+            <label>dpi<input name="dpi" type="number" value="200" min="1" max="1200" /></label>
+            <label>row<input name="row" type="number" value="1" min="1" /></label>
+            <label>col<input name="col" type="number" value="1" min="1" /></label>
+            <label>panel_by
+              <select name="panel_by">
+                <option value="">none/member</option>
+                <option value="member">member</option>
+                <option value="time">time</option>
+                <option value="height">height</option>
+                <option value="time_height">time_height</option>
+              </select>
+            </label>
+            <label>output format
+              <select name="output_format">
+                <option value="png">png</option>
+                <option value="pdf">pdf</option>
+                <option value="svg">svg</option>
+              </select>
+            </label>
+            <label>polar directory style
+              <select name="polar_dir_style">
+                <option value="auto">auto</option>
+                <option value="suffix">suffix</option>
+                <option value="nested">nested</option>
+              </select>
+            </label>
+            <label>polar max radius (km)<input name="polar_max_radius_km" value="380" /></label>
+            <label>polar resolution (km)<input name="polar_radius_resolution_km" placeholder="auto / domain dx" /></label>
+          </div>
+        </fieldset>
+
+        <fieldset id="customCodePanel" hidden>
+          <legend>Python 自定义绘图</legend>
+          <div class="custom-code-toolbar">
+            <span>默认环境：<strong>conda: wrf-webvis</strong> · 输出：PNG</span>
+            <button type="button" id="customCodeExample" data-write-only>填入示例</button>
+          </div>
+          <label class="custom-code-label" for="customCode">绘图代码</label>
+          <textarea id="customCode" name="custom_code" rows="18" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="粘贴完整 Python 脚本，或点击「填入示例」" disabled></textarea>
+          <p class="hint">读取网站所在机器上的数据，相对路径以项目根目录为基准。创建一张 Matplotlib 图即可自动收图；其他绘图库请将 PNG 保存到 OUTPUT_PATH。DPI 是当前设置的输出分辨率。</p>
+        </fieldset>
+
+        <fieldset data-fixed-plot>
+          <legend>Variables</legend>
+          <div class="variable-toolbar">
+            <strong>plot variables</strong>
+            <button type="button" id="addVariable">Add variable</button>
+          </div>
+          <div class="variable-table" role="group" aria-label="plot variables">
+            <div class="variable-head">
+              <span>on</span>
+              <span>name</span>
+              <span>type</span>
+              <span>cmap/color (blank = preset experiment color)</span>
+              <span>levels</span>
+              <span>extend</span>
+              <span>sigma</span>
+              <span>scale</span>
+              <span>advanced</span>
+              <span></span>
+            </div>
+            <div id="variableRows"></div>
+          </div>
+
+          <div class="variable-toolbar">
+            <strong>quiver variables</strong>
+            <button type="button" id="addQuiverVariable">Add quiver</button>
+          </div>
+          <div class="quiver-table" role="group" aria-label="quiver variables">
+            <div class="quiver-head">
+              <span>on</span>
+              <span>name</span>
+              <span>color</span>
+              <span>interval</span>
+              <span>scale</span>
+              <span>factor</span>
+              <span></span>
+            </div>
+            <div id="quiverRows"></div>
+          </div>
+          <p class="hint">levels can be written as 10|15|20, 10:51:5, or np.arange(10,51,5). Disabled rows are kept but not drawn.</p>
+        </fieldset>
+
+        <fieldset data-fixed-plot>
+          <legend>Selection</legend>
+          <div class="form-grid">
+            <label>members<input name="member_names" value="WRF_225_land" /></label>
+            <label title="中心方案编号（处理数据_v3/center_schemes.json），如 base,fpcc_v2。填多个时每个试验按方案展开成“试验@方案”，可按成员分面板或叠加比较；留空即 base。成员也可直接写 WRF_315_land@fpcc_v2。">中心方案<input name="center_schemes" placeholder="留空即 base；比较可写 base,fpcc_v2" /></label>
+            <label data-selection="time">time<input name="time" value="0" /></label>
+            <label data-selection="height">height<input name="height" placeholder="留空使用图型默认高度层" /></label>
+            <label data-selection="angle">angle<input name="angle" value="0,360" /></label>
+            <label data-selection="radius">radius<input name="radius" value="0,200" /></label>
+          </div>
+          <p class="hint">Selection accepts 0,1,2, 0|1|2, 0:120:1, np.arange(120), np.arange(0,120,1), or 0h5min. Colon ranges include the end value; np.arange keeps its usual exclusive end.</p>
+        </fieldset>
+
+        <fieldset data-fixed-plot>
+          <legend>Format</legend>
+          <div class="form-grid">
+            <label>title template<input name="title_template" value="{member} {time} {height} {variables}" /></label>
+            <label>figure width<input name="fig_width" value="9" /></label>
+            <label>figure height<input name="fig_height" value="8" /></label>
+            <label data-format="horizontal">xlim_km<input name="xlim_km" value="200" /></label>
+            <label data-format="horizontal">tick_interval_km<input name="tick_interval_km" value="50" /></label>
+            <label data-format="time-radius">time-radius xlim<input name="time_radius_xlim" placeholder="0,200" /></label>
+            <label data-format="time-radius">time-radius ylim (h)<input name="time_radius_ylim" placeholder="0,72（留空自动）" /></label>
+            <label data-format="time-radius">radius interval<input name="time_radius_radius_interval" value="50" /></label>
+            <label data-format="time-radius">time interval<input name="time_radius_time_interval" value="5" /></label>
+            <label data-format="time-azimuth">time-azimuth ylim (h)<input name="time_azimuth_ylim" placeholder="0,72（留空自动）" /></label>
+            <label data-format="time-height">time-height xlim (h)<input name="time_height_xlim" placeholder="0,72（留空自动）" /></label>
+            <label data-format="time-height">time-height ylim (m)<input name="time_height_ylim" placeholder="0,10000（留空自动）" /></label>
+            <label data-format="time-height">time interval (h)<input name="time_height_time_interval" value="6" /></label>
+            <label data-format="time-height">height interval (m)<input name="time_height_height_interval" value="1000" /></label>
+            <label data-format="time-series">time-series xlim<input name="time_series_xlim" placeholder="0,72" /></label>
+            <label data-format="time-series">time interval<input name="time_series_time_interval" value="6" /></label>
+            <label data-format="time-series">弱涡旋时隐藏 RMW
+              <select name="time_series_hide_weak_rmw">
+                <option value="false">false</option>
+                <option value="true">true</option>
+              </select>
+            </label>
+            <label data-format="time-series">RMW 最低轴平均最大切向风 (m/s)<input name="time_series_rmw_min_axis_mean_wind" type="number" step="any" value="10" /></label>
+            <label data-format="time-series">overlay members
+              <select name="time_series_overlay_members">
+                <option value="false">false</option>
+                <option value="true">true</option>
+              </select>
+            </label>
+            <label data-format="time-series">scatter points
+              <select name="time_series_scatter">
+                <option value="false">false</option>
+                <option value="true">true</option>
+              </select>
+            </label>
+            <label data-format="time-series">shear arrows
+              <select name="time_series_shear_arrows">
+                <option value="false">false</option>
+                <option value="true">true</option>
+              </select>
+            </label>
+            <label data-format="time-series">member arrow rows
+              <select name="time_series_member_rows">
+                <option value="false">false</option>
+                <option value="true">true</option>
+              </select>
+            </label>
+            <label data-format="track">track xlim km<input name="track_xlim_km" value="" /></label>
+            <label data-format="track">track ylim km<input name="track_ylim_km" value="" /></label>
+            <label data-format="track">track tick interval km<input name="track_tick_interval_km" value="100" /></label>
+            <label data-format="track">draw land distribution
+              <select name="track_draw_land_boundary">
+                <option value="true">true</option>
+                <option value="false">false</option>
+              </select>
+            </label>
+            <label data-format="three-d">3d radius km<input name="three_d_radius_km" value="300" /></label>
+            <label data-format="three-d">3d draw arrows
+              <select name="three_d_draw_arrows">
+                <option value="false">false</option>
+                <option value="true">true</option>
+              </select>
+            </label>
+            <label data-format="three-d">3d draw centers
+              <select name="three_d_draw_layer_centers">
+                <option value="true">true</option>
+                <option value="false">false</option>
+              </select>
+            </label>
+            <label data-format="three-d">arrow w min<input name="three_d_arrow_w_min" value="1" /></label>
+            <label data-format="three-d">arrow w max<input name="three_d_arrow_w_max" value="" /></label>
+            <label data-format="three-d">arrow interval<input name="three_d_arrow_interval" value="12" /></label>
+            <label data-format="three-d">surface opacity<input name="three_d_surface_opacity" value="0.8" /></label>
+            <label>colorbar title<input name="colorbar_title" value="auto" /></label>
+            <label>colorbar left<input name="colorbar_left" value="0.94" /></label>
+            <label>colorbar bottom<input name="colorbar_bottom" value="0.14" /></label>
+            <label>colorbar width<input name="colorbar_width" value="0.012" /></label>
+            <label>colorbar height<input name="colorbar_height" value="0.72" /></label>
+            <label>colorbar auto
+              <button type="button" id="autoColorbarPosition">Auto position</button>
+            </label>
+            <label>quiverkey x<input name="quiverkey_x" value="auto" /></label>
+            <label>quiverkey y<input name="quiverkey_y" value="auto" /></label>
+            <label>quiverkey U<input name="quiverkey_u" value="10" /></label>
+            <label>quiverkey label<input name="quiverkey_label" value="10 m/s" /></label>
+            <label data-format="horizontal">radius circles km<input name="radius_circles_km" value="50,100,150,200" /></label>
+            <label data-format="horizontal">draw RMW
+              <select name="draw_rmw">
+                <option value="false">false</option>
+                <option value="true">true</option>
+              </select>
+            </label>
+            <label data-format="horizontal">draw land boundary
+              <select name="draw_land_distance">
+                <option value="false">false</option>
+                <option value="true">true</option>
+              </select>
+            </label>
+            <label data-format="horizontal">center reference
+              <select name="center_reference">
+                <option value="slp">slp center</option>
+                <option value="height">current height center</option>
+                <option value="domain">domain center</option>
+              </select>
+            </label>
+          </div>
+          <details class="parameter-details" open>
+            <summary>按图型设置高级绘图参数</summary>
+            <div id="advancedFormatOptions" class="advanced-option-groups"></div>
+          </details>
+        </fieldset>
+
+        <p id="formStatus" class="form-status" role="status" aria-live="polite"></p>
+        <div class="dialog-actions">
+          <button type="button" id="dryRun" data-plot-only>Check data</button>
+          <button id="submitPlot" type="submit" class="primary" disabled>只读展示：无法提交</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="imageZoomDialog" class="zoom-dialog">
+      <div class="zoom-head">
+        <h3 id="zoomTitle">Image preview</h3>
+        <button type="button" id="closeZoom" class="icon-button">x</button>
+      </div>
+      <div id="annotationToolbar" class="annotation-toolbar"></div>
+      <div class="zoom-body">
+        <div class="zoom-stage"><div id="zoomFrame" class="annot-frame"><img id="zoomImage" alt="enlarged WRF plot" /></div></div>
+        <aside id="annotationList" class="annotation-list" aria-label="批注列表"></aside>
+      </div>
+    </dialog>
+
+    <div id="undoToast" class="undo-toast" role="status" aria-live="polite" hidden>
+      <span></span>
+      <button type="button" class="primary">撤销</button>
+      <button type="button" class="icon-button" data-dismiss aria-label="关闭">x</button>
+    </div>
+
+    <dialog id="trashDialog" class="trash-dialog">
+      <div class="dialog-head trash-head">
+        <h3>最近删除的图片</h3>
+        <button type="button" id="closeTrash" class="icon-button">x</button>
+      </div>
+      <p class="hint trash-hint">删除的图片先放在这里，点“恢复”放回看板原来的位置（图片上的批注也一起恢复）。</p>
+      <div id="trashList" class="trash-list"></div>
+    </dialog>
+
+
+
+
+
+
+    <dialog id="accountsDialog" class="accounts-dialog" aria-labelledby="accountsTitle">
+      <div class="accounts-shell">
+        <div class="zoom-head">
+          <div>
+            <h3 id="accountsTitle">账号管理</h3>
+            <span class="log-refresh-note">本机访问自动是 root；公网访问要登录。勾选父看板＝包含它的全部子看板（含以后新建的）。</span>
+          </div>
+          <div class="log-dialog-actions">
+            <button type="button" id="newAccount" class="primary">新建账号</button>
+            <button type="button" id="closeAccounts" class="icon-button" aria-label="关闭">x</button>
+          </div>
+        </div>
+        <div class="accounts-body">
+          <div id="accountsList" class="accounts-list" role="list"></div>
+          <form id="accountForm" class="account-form" autocomplete="off" hidden></form>
+        </div>
+        <p id="accountsStatus" class="accounts-status" role="status"></p>
+      </div>
+    </dialog>
+
+    <dialog id="logDialog" class="log-dialog">
+      <div class="log-dialog-shell">
+        <div class="zoom-head">
+          <div>
+            <h3>最近日志</h3>
+            <span class="log-refresh-note">显示最近 200 行，每 2 秒自动刷新</span>
+          </div>
+          <div class="log-dialog-actions">
+            <button type="button" id="refreshLogs">刷新</button>
+            <button type="button" id="closeLogs" class="icon-button">x</button>
+          </div>
+        </div>
+        <div id="logContents" class="log-contents" aria-live="polite"></div>
+      </div>
+    </dialog>
+
+    <aside id="progressPanel" class="progress-panel">
+      <header>
+        <strong>Progress</strong>
+        <div class="progress-actions">
+          <button id="cancelProgress" data-plot-only>Stop</button>
+          <button id="clearProgress" class="icon-button">x</button>
+        </div>
+      </header>
+      <div class="progress-job-picker">任务
+        <div class="job-picker">
+          <button type="button" id="progressJobButton" class="job-picker-button" aria-haspopup="listbox" aria-expanded="false">（没有任务）</button>
+          <ul id="progressJobMenu" class="job-picker-menu" role="listbox" hidden></ul>
+        </div>
+        <select id="progressJobSelect" class="visually-hidden-select" aria-hidden="true" tabindex="-1"></select>
+      </div>
+      <div id="progressMessages" aria-live="polite"></div>
+    </aside>
+
+    <script src="/static/access.js?v=20261107-core"></script>
+    <script src="/static/variable_memory.js?v=20261028"></script>
+    <script src="/static/app.js?v=20261107-core&access=20261106&custom=20261014"></script>
+    <script src="/static/data_management.js?v=20261104-netcdflock1&access=20261013"></script>
+
+
+
+
+
+    <script src="/static/annotations.js?v=20261107-core"></script>
+
+
+    <script src="/static/accounts.js?v=20261106-plot"></script>
+  </body>
+</html>

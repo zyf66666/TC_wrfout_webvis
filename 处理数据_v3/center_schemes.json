@@ -1,0 +1,70 @@
+{
+  "_说明": "中心方案（2026-11-02）。每个方案是一套完整的定中心参数（按 domain）。base 的结果放在 processed_v3/<试验>/dXX/，其他方案里依赖中心的变量放在 processed_v3/centers/<方案>/<试验>/dXX/。方案一旦算出数据就不要再改参数：要换参数请新增一个方案。可用算法与参数见 wrf_processing_v3/variables/_center_options.py。",
+  "base": {
+    "label": "默认：Bezier PCC v1，逐层独立",
+    "description": "2026-10-27 起的默认中心。地面与各高度分别定位，不以上一层中心约束搜索。d03 60 km 首猜搜索、121 格截取半宽、44 格 PCC 半径、20 格边界、最多 10 次迭代。",
+    "center_options_by_domain": {
+      "2": {
+        "search_radius_km": 30.0,
+        "cross_radius_grid": 24,
+        "pcc_radius_grid": 9,
+        "boundary_width": 4,
+        "max_iterations": 10
+      },
+      "3": {
+        "algorithm": "bezier_pcc_v1",
+        "layer_mode": "independent",
+        "search_radius_km": 60.0,
+        "cross_radius_grid": 121,
+        "pcc_radius_grid": 44,
+        "boundary_width": 20,
+        "max_iterations": 10
+      }
+    }
+  },
+  "pcc_vertical": {
+    "label": "Bezier PCC v1，逐层连续",
+    "description": "与 base 参数相同，但层中心逐层连续：每层从下一层（最低层从地面中心）附近开始搜索。",
+    "center_options_by_domain": {
+      "2": {
+        "search_radius_km": 30.0,
+        "cross_radius_grid": 24,
+        "pcc_radius_grid": 9,
+        "boundary_width": 4,
+        "max_iterations": 10,
+        "layer_mode": "vertical"
+      },
+      "3": {
+        "algorithm": "bezier_pcc_v1",
+        "layer_mode": "vertical",
+        "search_radius_km": 60.0,
+        "cross_radius_grid": 121,
+        "pcc_radius_grid": 44,
+        "boundary_width": 20,
+        "max_iterations": 10
+      }
+    }
+  },
+  "fpcc_v2": {
+    "label": "地面中心用平滑首猜 + 浮点 PCC（v2）",
+    "description": "d03 地面中心改用 smooth_fg_float_pcc_v2（50 km 首猜平滑、80 km PCC 半径、浮点迭代至 0.05 格）；层中心仍用 Bezier PCC v1 逐层独立。",
+    "center_options_by_domain": {
+      "2": {
+        "search_radius_km": 30.0,
+        "cross_radius_grid": 24,
+        "pcc_radius_grid": 9,
+        "boundary_width": 4,
+        "max_iterations": 10
+      },
+      "3": {
+        "algorithm": "smooth_fg_float_pcc_v2",
+        "layer_mode": "independent",
+        "search_radius_km": 60.0,
+        "cross_radius_grid": 121,
+        "pcc_radius_grid": 44,
+        "boundary_width": 20,
+        "max_iterations": 10
+      }
+    }
+  }
+}

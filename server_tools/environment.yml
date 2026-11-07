@@ -1,0 +1,11 @@
+name: wrf-server-tools
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - numpy<2
+  - setuptools<82
+  - scipy
+  - netcdf4=1.6.5
+  - matplotlib
+  - wrf-python

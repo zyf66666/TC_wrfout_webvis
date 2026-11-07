@@ -1,0 +1,13 @@
+fastapi
+httpx
+uvicorn
+pydantic
+PyYAML
+numpy
+scipy
+matplotlib
+Pillow
+cmaps
+plotly
+kaleido
+netCDF4

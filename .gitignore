@@ -1,0 +1,27 @@
+__pycache__/
+.pytest_cache/
+.runtime/
+storage_data/
+wrf_webvis/app/static/figures/
+processed/
+*.npy
+*.pyc
+._*
+
+# 本机私密配置（代理、密钥），不要提交
+isp.yaml
+.env
+*.env
+
+_归档/
+.playwright-cli/
+
+# conda 配置里带冒号的 envs_dirs 条目 "T7:py39" 会在当前目录误建这个文件夹
+T7:py39/
+
+# 本机文件、发布备份和运行数据不公开
+.DS_Store
+*.sqlite
+*.sqlite3
+
+output/playwright/
